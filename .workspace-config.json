@@ -1,0 +1,12 @@
+{
+  "category": "public",
+  "environments": ["sandbox", "development", "release"],
+  "remotes": {
+    "private": "https://github.com/slowbro/video-downloader-mcp-dev.git",
+    "public": "https://github.com/slowbro/video-downloader-mcp.git"
+  },
+  "workflows": {
+    "development": "private-dev",
+    "release": "public-release"
+  }
+}
