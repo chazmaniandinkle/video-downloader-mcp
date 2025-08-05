@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "video-downloader-mcp"
 version = "0.1.0"
-description = "MCP server for intelligent video downloading and analysis"
+description = "MCP server that gives agents video downloading capabilities across 1000+ sites"
 authors = [
     {name = "Claude Code Assistant"}
 ]

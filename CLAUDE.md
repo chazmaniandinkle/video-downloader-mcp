@@ -4,15 +4,15 @@ This file provides guidance to Claude Code when working with the Video Downloade
 
 ## Project Overview
 
-This MCP server exposes video downloading capabilities as discrete tools that LLMs can orchestrate intelligently. It represents a **paradigm shift** from the original monolithic script to a **tool-based architecture**.
+This MCP server provides agents with video downloading capabilities through 7 discrete tools. It demonstrates key architectural patterns for building secure, agent-friendly MCP servers while solving the practical need for video extraction from 1000+ platforms.
 
 ## Architecture Philosophy
 
 ### **Tool-First Design**
-- Each operation is a discrete tool with clear input/output
-- LLMs make intelligent decisions about tool usage
-- Granular control enables complex workflows
-- Error handling is structured and actionable
+- Each operation is a discrete tool with defined input/output contracts
+- Agents can compose tools for complex workflows
+- Clean separation between tool interface and implementation
+- Structured error handling for reliable agent integration
 
 ### **Layered Fallback Strategy**
 1. **Primary**: yt-dlp tools (fast, comprehensive)

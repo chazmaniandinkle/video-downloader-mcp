@@ -4,17 +4,16 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io/)
 
-A powerful **Model Context Protocol (MCP) server** that transforms video downloading into a tool-based system for LLM orchestration. Built on yt-dlp with comprehensive security features and intelligent fallback mechanisms.
+**Give your agents the ability to download videos from 1000+ sites with built-in security.** This MCP server provides 7 discrete tools that agents can use to check, analyze, and download videos from nearly any web page. Built on yt-dlp with security validation and fallback analysis.
 
 ## 🌟 Features
 
-- **🛠️ 7 MCP Tools** for intelligent video processing workflows
-- **🔒 Enterprise Security** with path validation and sandboxed downloads
-- **🌐 1000+ Platforms** supported via yt-dlp integration
-- **🧠 LLM-Orchestrated** workflows with granular tool control
-- **🔄 Fallback Analysis** for unsupported sites
-- **📁 Organized Downloads** with configurable secure locations
-- **⚡ High Performance** with efficient format selection
+- **🛠️ 7 MCP Tools** - Discrete capabilities for checking, analyzing, and downloading videos
+- **🔒 Built-in Security** - Path validation, location restrictions, and input sanitization
+- **🌐 1000+ Sites Supported** - YouTube, Facebook, TikTok, and hundreds more via yt-dlp
+- **🔄 Fallback Analysis** - Pattern matching when yt-dlp doesn't support a site
+- **📁 Organized Downloads** - Configurable secure locations with filename templates
+- **⚙️ Agent-Friendly** - Clean JSON responses and structured error handling
 
 ## 🚀 Quick Start
 
@@ -49,11 +48,13 @@ Add to your MCP client configuration (e.g., Claude Desktop):
 
 ### First Download
 
+Your agent can now download videos with simple tool calls:
+
 ```python
-# Example: LLM workflow for downloading a video
-1. check_ytdlp_support("https://youtube.com/watch?v=example")
-2. get_video_formats(url) → analyze quality options  
-3. download_video(url, location_id="default", format_id="best")
+# Agent workflow example
+1. check_ytdlp_support("https://youtube.com/watch?v=example")  # → supported: true
+2. get_video_formats(url)  # → analyze available qualities
+3. download_video(url, location_id="default", format_id="best")  # → download to ~/video-downloader/
 ```
 
 ## 🛠️ Available Tools
@@ -99,38 +100,43 @@ block_path_traversal = true
 default = "~/video-downloader"
 ```
 
-## 🎯 Usage Examples
+## 🎯 Agent Integration Examples
 
-### Basic Video Download
+### Simple Video Download
 ```bash
-# LLM: "Download this YouTube video in good quality"
-→ check_ytdlp_support("https://youtube.com/watch?v=dQw4w9WgXcQ")
-→ get_video_formats(url) 
-→ download_video(url, format_id="720p", location_id="default")
+User: "Download this YouTube video in good quality"
+Agent: 
+→ check_ytdlp_support("https://youtube.com/watch?v=dQw4w9WgXcQ")  # ✓ supported
+→ get_video_formats(url)  # finds 720p format
+→ download_video(url, format_id="22", location_id="default")  # downloads to ~/video-downloader/
 ```
 
-### Quality Selection Workflow  
+### Quality-Aware Selection  
 ```bash
-# LLM: "Show me all available qualities and download the best one under 100MB"
-→ get_video_formats(url)
-→ [LLM analyzes format sizes]
-→ download_video(url, format_id="selected_format")
+User: "Get the best quality under 100MB"
+Agent: 
+→ get_video_formats(url)  # lists all formats with sizes
+→ [agent analyzes: 480p=45MB, 720p=95MB, 1080p=180MB]
+→ download_video(url, format_id="720p")  # selects 95MB option
 ```
 
-### Fallback Analysis
+### Chained with Web Search
 ```bash
-# LLM: "This site isn't supported by yt-dlp, can you analyze it?"
-→ check_ytdlp_support(url) → fails
-→ analyze_webpage(url) 
-→ extract_media_patterns(url)
-→ [Returns manifest URLs and video files found]
+User: "Find and download the latest Corridor Crew video"
+Agent:
+→ web_search("Corridor Crew latest video YouTube")  # finds URL
+→ check_ytdlp_support(found_url)  # ✓ supported  
+→ download_video(found_url, location_id="default")
 ```
 
-### Organized Downloads
+### Unsupported Site Analysis
 ```bash
-# LLM: "Download this to my Movies folder in the 'documentaries' subfolder"
-→ get_download_locations()
-→ download_video(url, location_id="movies", relative_path="documentaries")
+User: "This custom streaming site has a video I need"
+Agent:
+→ check_ytdlp_support(url)  # ✗ not supported
+→ analyze_webpage(url)  # finds video player type  
+→ extract_media_patterns(url)  # extracts manifest URLs
+→ [returns streaming URLs for manual processing]
 ```
 
 ## ⚙️ Configuration
@@ -188,29 +194,64 @@ ChatGPT: I'll extract the video information and download just the audio for you.
 🎵 Downloaded: Audio-only version (m4a, 42MB)
 ```
 
-## 🔧 Development
+## 🏗️ MCP Architecture Patterns
 
-### Architecture Overview
+This server demonstrates several reusable patterns for building secure, agent-friendly MCP servers:
 
+### Tool Declaration Pattern
+```python
+# Reusable pattern for tool definitions
+types.Tool(
+    name="check_ytdlp_support",
+    description="Check if a URL is supported by yt-dlp and get basic info",
+    inputSchema={
+        "type": "object",
+        "properties": {
+            "url": {"type": "string", "description": "Video URL to check"}
+        },
+        "required": ["url"]
+    }
+)
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   LLM Client    │───▶│   MCP Server    │───▶│   yt-dlp Core   │
-│  (Claude, etc.) │    │  (This Project) │    │  (Video Engine) │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         │              ┌─────────────────┐              │
-         └─────────────▶│ Fallback Tools  │◀─────────────┘
-                        │  (Web Analysis) │
-                        └─────────────────┘
+
+### Security Validation Pattern
+```python
+# Multi-layer security validation
+def validate_and_construct_path(self, location_id: str, relative_path: str):
+    # 1. Validate location exists in config
+    # 2. Check path traversal attempts  
+    # 3. Canonicalize and verify boundaries
+    # 4. Sanitize filename templates
+    return validated_path
 ```
 
-### Key Components
+### Structured Response Pattern
+```python
+# Consistent success/error responses
+try:
+    result = perform_operation()
+    return [types.TextContent(
+        type="text",
+        text=json.dumps({"success": True, "data": result})
+    )]
+except Exception as e:
+    return [types.TextContent(
+        type="text",
+        text=json.dumps({"success": False, "error": str(e)})
+    )]
+```
 
-- **YtDlpExtractor**: Wraps yt-dlp with structured interfaces
-- **WebpageAnalyzer**: Fallback analysis for unsupported sites  
-- **SecureConfigManager**: TOML-based configuration with security defaults
-- **PathValidator**: Multi-layer path security validation
-- **LocationManager**: Manages configured download locations
+### Configuration Management Pattern
+```python
+# TOML-based secure configuration
+class SecureConfigManager:
+    def __init__(self):
+        self.config_path = Path.home() / ".config" / "app-name" / "config.toml"
+        self.load_or_create_default()
+    
+    def get(self, key_path: str, default=None):
+        # Safe nested key access with defaults
+```
 
 ### Testing
 
@@ -310,4 +351,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Transform your video downloading workflow with intelligent LLM orchestration!** 🎬✨
+**Give your agents video downloading capabilities across 1000+ platforms.** 🎬

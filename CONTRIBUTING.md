@@ -235,4 +235,4 @@ Contributors will be recognized in:
 - GitHub contributor stats
 - Release notes for significant contributions
 
-Thank you for helping make video downloading more intelligent and secure! 🎬✨
+Thank you for helping improve agent video downloading capabilities! 🎬
