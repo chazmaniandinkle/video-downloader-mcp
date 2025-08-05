@@ -34,17 +34,33 @@ List all available video/audio formats and quality options.
 **Output**: Detailed format list with codecs, resolutions, file sizes
 
 #### `download_video`
-Download video with specific format and output options.
+Securely download video with format and location options.
 
-**Input**: 
+**Input (Secure)**: 
 ```json
 {
   "url": "https://example.com/video",
-  "format_id": "137",  # optional
-  "output_path": "%(title)s.%(ext)s"  # optional
+  "location_id": "default",           // configured download location
+  "relative_path": "movies",          // optional subdirectory
+  "filename_template": "%(title)s.%(ext)s",  // optional template
+  "format_id": "137"                  // optional format
 }
 ```
-**Output**: Download status and logs
+
+**Input (Legacy - Deprecated)**: 
+```json
+{
+  "url": "https://example.com/video",
+  "output_path": "%(title)s.%(ext)s"  // bypasses security validation
+}
+```
+**Output**: Download status, secure path, and logs
+
+#### `get_download_locations`
+List configured secure download locations.
+
+**Input**: `{}` (no parameters)
+**Output**: Available locations with write permissions and descriptions
 
 ### Fallback Analysis Tools
 
@@ -149,6 +165,28 @@ python server.py
 | Built-in LLM analysis | LLM client does analysis |
 | Single point of interaction | Multiple specialized tools |
 | Limited extensibility | Highly composable |
+
+## 🔒 Security Features
+
+The MCP server includes comprehensive security protections:
+
+- **Path traversal protection** - prevents `../` attacks
+- **Configured download locations** - no arbitrary file access
+- **Extension validation** - only safe file types allowed
+- **Template sanitization** - removes dangerous shell characters
+- **TOML configuration** - secure, no deserialization vulnerabilities
+
+See [SECURITY.md](SECURITY.md) for detailed security documentation.
+
+### Secure Download Example
+```json
+{
+  "url": "https://example.com/video",
+  "location_id": "default",          // Uses configured secure location
+  "relative_path": "movies/action",  // Validated relative path
+  "filename_template": "%(title)s.%(ext)s"  // Sanitized template
+}
+```
 
 ## 🛡️ Error Handling
 

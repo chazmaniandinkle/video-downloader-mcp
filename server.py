@@ -130,7 +130,7 @@ class PathValidator:
         self.max_filename_length = config.get('security.max_filename_length', 255)
         self.block_traversal = config.get('security.block_path_traversal', True)
     
-    def validate_path(self, path: str, base_dir: str) -> tuple[bool, Optional[str], Optional[str]]:
+    def validate_path(self, path: str, base_dir: str, skip_extension_check: bool = False) -> tuple[bool, Optional[str], Optional[str]]:
         """
         Validate a path against security constraints
         Returns: (is_valid, normalized_path, error_message)
@@ -162,8 +162,8 @@ class PathValidator:
             if len(filename) > self.max_filename_length:
                 return False, None, f"Filename too long (max {self.max_filename_length} chars)"
             
-            # Validate file extension if specified
-            if self.allowed_extensions:
+            # Validate file extension if specified (skip for templates)
+            if self.allowed_extensions and not skip_extension_check:
                 ext = os.path.splitext(filename)[1].lower().lstrip('.')
                 if ext and ext not in self.allowed_extensions:
                     return False, None, f"File extension .{ext} not allowed"
@@ -287,8 +287,9 @@ class LocationManager:
         # Sanitize template variables
         full_relative = self.validator.sanitize_template_vars(full_relative)
         
-        # Validate the final path
-        return self.validator.validate_path(full_relative, base_path)
+        # Validate the final path (skip extension check for templates)
+        has_template_vars = '%(' in full_relative
+        return self.validator.validate_path(full_relative, base_path, skip_extension_check=has_template_vars)
 
 # Server instance
 server = Server("video-downloader")
@@ -528,9 +529,21 @@ async def handle_list_tools() -> list[types.Tool]:
                         "type": "string",
                         "description": "Specific format ID to download (optional)"
                     },
+                    "location_id": {
+                        "type": "string",
+                        "description": "Download location ID from configured locations (optional, defaults to 'default')"
+                    },
+                    "relative_path": {
+                        "type": "string",
+                        "description": "Relative path within the location (optional)"
+                    },
+                    "filename_template": {
+                        "type": "string",
+                        "description": "yt-dlp filename template (optional, defaults to config)"
+                    },
                     "output_path": {
                         "type": "string", 
-                        "description": "Output file path template (optional)"
+                        "description": "DEPRECATED: Use location_id + relative_path instead. Full output path template"
                     }
                 },
                 "required": ["url"]
@@ -562,6 +575,15 @@ async def handle_list_tools() -> list[types.Tool]:
                     }
                 },
                 "required": ["url"]
+            }
+        ),
+        types.Tool(
+            name="get_download_locations",
+            description="Get available secure download locations",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": []
             }
         )
     ]
@@ -675,9 +697,56 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
     elif name == "download_video":
         url = arguments["url"]
         format_id = arguments.get("format_id")
-        output_path = arguments.get("output_path")
         
+        # Handle new secure path construction vs legacy output_path
+        output_path = None
+        if "output_path" in arguments:
+            # Legacy mode - use output_path directly (with warning)
+            output_path = arguments["output_path"]
+            logger.warning("Using deprecated output_path parameter. Consider using location_id + relative_path for security.")
+        else:
+            # New secure mode - construct path using security framework
+            try:
+                config = SecureConfigManager() 
+                location_manager = LocationManager(config)
+                
+                location_id = arguments.get("location_id", "default")
+                relative_path = arguments.get("relative_path")
+                filename_template = arguments.get("filename_template")
+                
+                # Construct secure path
+                valid, secure_path, error = location_manager.construct_download_path(
+                    location_id, relative_path, filename_template
+                )
+                
+                if not valid:
+                    return [types.TextContent(
+                        type="text",
+                        text=json.dumps({
+                            "success": False,
+                            "error": f"Path validation failed: {error}"
+                        })
+                    )]
+                
+                output_path = secure_path
+                
+            except Exception as e:
+                return [types.TextContent(
+                    type="text", 
+                    text=json.dumps({
+                        "success": False,
+                        "error": f"Failed to construct secure download path: {str(e)}"
+                    })
+                )]
+        
+        # Execute download with validated path
         result = YtDlpExtractor.download_video(url, format_id, output_path)
+        
+        # Add security info to response
+        if result.get("success"):
+            result["download_path"] = output_path
+            if config.get('logging.log_downloads', True):
+                logger.info(f"Download completed: {url} -> {output_path}")
         
         return [types.TextContent(
             type="text",
@@ -737,6 +806,28 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                 "metadata": metadata
             })
         )]
+    
+    elif name == "get_download_locations":
+        try:
+            config = SecureConfigManager()
+            location_manager = LocationManager(config)
+            locations = location_manager.get_locations()
+            
+            return [types.TextContent(
+                type="text",
+                text=json.dumps({
+                    "success": True,
+                    "locations": locations
+                })
+            )]
+        except Exception as e:
+            return [types.TextContent(
+                type="text",
+                text=json.dumps({
+                    "success": False,
+                    "error": f"Failed to get download locations: {str(e)}"
+                })
+            )]
     
     else:
         raise ValueError(f"Unknown tool: {name}")
