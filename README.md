@@ -28,7 +28,7 @@ pip install mcp yt-dlp requests aiohttp
 pip install tomli
 
 # Clone the repository
-git clone https://github.com/your-username/video-downloader-mcp.git
+git clone https://github.com/chazmaniandinkle/video-downloader-mcp.git
 cd video-downloader-mcp
 ```
 

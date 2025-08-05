@@ -13,7 +13,7 @@ Thank you for your interest in contributing! This project welcomes contributions
 
 1. **Fork and Clone**
    ```bash
-   git clone https://github.com/your-username/video-downloader-mcp.git
+   git clone https://github.com/chazmaniandinkle/video-downloader-mcp.git
    cd video-downloader-mcp
    ```
 
