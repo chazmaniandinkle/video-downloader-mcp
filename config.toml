@@ -1,0 +1,41 @@
+# Video Downloader MCP Server Configuration
+# This file controls download locations and security settings
+
+[download_locations]
+# Default download location - created automatically if it doesn't exist
+default = "~/video-downloader"
+
+# Additional download locations - uncomment and modify as needed
+# downloads = "~/Downloads/videos"
+# temp = "/tmp/video-downloads"
+# archive = "~/Documents/video-archive"
+
+[security]
+# Enforce location restrictions - when true, only configured locations are allowed
+enforce_location_restrictions = true
+
+# Maximum filename length to prevent filesystem issues
+max_filename_length = 255
+
+# Allowed file extensions for downloads
+allowed_extensions = ["mp4", "webm", "mkv", "avi", "mov", "m4a", "mp3", "aac", "ogg", "wav", "vtt", "srt", "ass", "ssa"]
+
+# Prevent path traversal attempts
+block_path_traversal = true
+
+[ytdlp]
+# Default format selection for yt-dlp
+default_format = "best[height<=1080]"
+
+# Default filename template (use yt-dlp template variables)
+default_filename_template = "%(title)s.%(ext)s"
+
+# Maximum download size in bytes (0 = unlimited)
+max_download_size = 0
+
+[logging]
+# Enable detailed logging for security events
+log_security_events = true
+
+# Log download operations
+log_downloads = true
